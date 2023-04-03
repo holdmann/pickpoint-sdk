@@ -131,9 +131,7 @@ class PickPointConnector implements DeliveryConnector
             'json' => [
                 'SessionId' => $this->auth(),
                 'IKN' => $this->pickPointConf->getIKN(),
-            ],
-            'connect_timeout' => DELIVERY_API_DEFAULT_CONNECT_TIMEOUT,
-            'timeout' => DELIVERY_API_DEFAULT_RESPONSE_TIMEOUT,
+            ]
         ];
         if (defined('DELIVERY_API_DEFAULT_CONNECT_TIMEOUT'))
         {
@@ -141,7 +139,7 @@ class PickPointConnector implements DeliveryConnector
         }
         if (defined('DELIVERY_API_DEFAULT_RESPONSE_TIMEOUT'))
         {
-            $options['timeout'] = $options('DELIVERY_API_DEFAULT_RESPONSE_TIMEOUT');
+            $options['timeout'] = constant('DELIVERY_API_DEFAULT_RESPONSE_TIMEOUT');
         }
 
         /** @var \GuzzleHttp\Client $this->client */
