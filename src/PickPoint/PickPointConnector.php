@@ -127,12 +127,25 @@ class PickPointConnector implements DeliveryConnector
     {
         $url = $this->pickPointConf->getHost() . '/clientpostamatlist';
 
-        $request = $this->client->post($url, [
+        $options = [
             'json' => [
                 'SessionId' => $this->auth(),
                 'IKN' => $this->pickPointConf->getIKN(),
             ],
-        ]);
+            'connect_timeout' => DELIVERY_API_DEFAULT_CONNECT_TIMEOUT,
+            'timeout' => DELIVERY_API_DEFAULT_RESPONSE_TIMEOUT,
+        ];
+        if (defined('DELIVERY_API_DEFAULT_CONNECT_TIMEOUT'))
+        {
+            $options['connect_timeout'] = constant('DELIVERY_API_DEFAULT_CONNECT_TIMEOUT');
+        }
+        if (defined('DELIVERY_API_DEFAULT_RESPONSE_TIMEOUT'))
+        {
+            $options['timeout'] = $options('DELIVERY_API_DEFAULT_RESPONSE_TIMEOUT');
+        }
+
+        /** @var \GuzzleHttp\Client $this->client */
+        $request = $this->client->post($url, $options);
         $response = json_decode($request->getBody()->getContents(), true);
 
         $this->checkMethodException($response, $url);
@@ -311,12 +324,12 @@ class PickPointConnector implements DeliveryConnector
 
     /**
      * Returns current delivery status
-     * @param string $invoiceNumber
-     * @param string $orderNumber
+     * @param string|null $invoiceNumber
+     * @param string|null $orderNumber
      * @return mixed
      * @throws PickPointMethodCallException
      */
-    public function getState(string $invoiceNumber, string $orderNumber = ''): State
+    public function getState(?string $invoiceNumber = null, ?string $orderNumber = null): State
     {
 
         $url = $this->pickPointConf->getHost() . '/tracksending';
@@ -668,10 +681,9 @@ class PickPointConnector implements DeliveryConnector
         ]);
 
         $response = json_decode($request->getBody()->getContents(), true);
-
         $this->checkMethodException($response, $url);
 
-        return current($response);
+        return $response ? current($response) : [];
     }
 
     /**
@@ -871,5 +883,174 @@ class PickPointConnector implements DeliveryConnector
         $packageSize = new PackageSize($enclose['Width'], $enclose['Height'], $enclose['Depth'], $enclose['Weight']);
 
         return $packageSize;
+    }
+
+//    /**
+//     * @return array
+//     * @throws PickPointMethodCallException
+//     */
+//    public function getCityList(): array
+//    {
+//        $url = $this->pickPointConf->getHost() . '/citylist';
+//
+//        $request = $this->client->get($url);
+//
+//        $response = json_decode($request->getBody()->getContents(), true);
+//
+//        $this->checkMethodException($response, $url);
+//
+//        $states = [];
+//        foreach ($response as $state) {
+//            $states[] = $state;
+//        }
+//
+//        return $states;
+//    }
+    /**
+     * @return array
+     * @throws PickPointMethodCallException
+     */
+    public function getCityList()
+    {
+        $url = $this->pickPointConf->getHost() . '/citylist';
+
+        $request = $this->client->get($url);
+
+        $response = json_decode($request->getBody()->getContents(), true);
+
+        $this->checkMethodException($response, $url);
+
+        $arr = [];
+
+
+
+
+        foreach ($response as $state) {
+            if(in_array($state['RegionName'], $arr)){
+                continue;
+            }
+            $arr[] = $state['RegionName'];
+            $states .= '""'.'=> "'.$state['RegionName'].'",'."\n";
+        }
+
+        return $states;
+    }
+    public static function mapIsoToRegionName($isoCode)
+    {
+        $map = [
+            "RU-AD"=> "Адыгея респ.",
+            "RU-MOS"=> "Московская обл.",
+            "RU-MOW"=> "Московская обл.",
+            "RU-LIP"=> "Липецкая обл.",
+            "RU-BA"=> "Башкортостан респ.",
+            "RU-ALT"=> "Алтайский край",
+            "RU-KDA"=> "Краснодарский край",
+            "RU-SAM"=> "Самарская обл.",
+            "RU-IRK"=> "Иркутская обл.",
+            "RU-PER"=> "Пермский край",
+            "RU-TYU"=> "Тюменская обл.",
+            "RU-SPE"=> "Ленинградская обл.",
+            "RU-LEN"=> "Ленинградская обл.",
+            "RU-TVE"=> "Тверская обл.",
+            "RU-AMU"=> "Амурская обл.",
+            "RU-STA"=> "Ставропольский край",
+            "RU-CHU"=> "Чукотский авт. округ",
+            "RU-ARK"=> "Архангельская обл.",
+            "RU-BEL"=> "Белгородская обл.",
+            "RU-MUR"=> "Мурманская обл.",
+            "RU-KHM"=> "Ханты-Мансийский авт. округ-Югра",
+            "RU-AST"=> "Астраханская обл.",
+            "RU-ROS"=> "Ростовская обл.",
+            "RU-CR"=> "Крым респ.",
+            "UA-43" => "Крым респ.",
+            "RU-NVS"=> "Новосибирская обл.",
+            "RU-KB"=> "Кабардино-Балкарская респ.",
+            "RU-SVE"=> "Свердловская обл.",
+            "bel"=> "Беларусь",
+            "RU-BRY"=> "Брянская обл.",
+            "RU-SAR"=> "Саратовская обл.",
+            "RU-BU"=> "Бурятия респ.",
+            "RU-VLA"=> "Владимирская обл.",
+            "RU-VGG"=> "Волгоградская обл.",
+            "RU-VLG"=> "Вологодская обл.",
+            "RU-VOR"=> "Воронежская обл.",
+            "RU-AL"=> "Алтай респ.",
+            "RU-CHE"=> "Челябинская обл.",
+            "RU-DA"=> "Дагестан респ.",
+            "RU-KIR"=> "Кировская обл.",
+            "RU-YEV"=> "Еврейская авт. обл.",
+            "RU-IVA"=> "Ивановская обл.",
+            "RU-KGD"=> "Калининградская обл.",
+            "RU-KL"=> "Калмыкия респ.",
+            "RU-KLU"=> "Калужская обл.",
+            "RU-KAM"=> "Камчатский край",
+            "RU-KC"=> "Карачаево-Черкесская респ.",
+            "RU-KR"=> "Карелия респ.",
+            "RU-TUL"=> "Тульская обл.",
+            "RU-YAR"=> "Ярославская обл.",
+            "RU-KEM"=> "Кемеровская обл.",
+            "RU-KO"=> "Коми респ.",
+            "RU-KOS"=> "Костромская обл.",
+            "RU-KYA"=> "Красноярский край",
+            "RU-KGN"=> "Курганская обл.",
+            "RU-KRS"=> "Курская обл.",
+            "RU-MAG"=> "Магаданская обл.",
+            "RU-ME"=> "Марий Эл респ.",
+            "RU-MO"=> "Мордовия респ.",
+            "RU-NIZ"=> "Нижегородская обл.",
+            "RU-NGR"=> "Новгородская обл.",
+            "RU-OMS"=> "Омская обл.",
+            "RU-ORE"=> "Оренбургская обл.",
+            "RU-ORL"=> "Орловская обл.",
+            "RU-PNZ"=> "Пензенская обл.",
+            "RU-PRI"=> "Приморский край",
+            "RU-PSK"=> "Псковская обл.",
+            "RU-RYA"=> "Рязанская обл.",
+            "RU-SA"=> "Саха (Якутия) респ.",
+            "RU-SAK"=> "Сахалинская обл.",
+            "RU-SE"=> "Северная Осетия-Алания респ.",
+            "RU-SMO"=> "Смоленская обл.",
+            "RU-TAM"=> "Тамбовская обл.",
+            "RU-TA"=> "Татарстан респ.",
+            "RU-TOM"=> "Томская обл.",
+            "RU-TY"=> "Тыва респ.",
+            "RU-YAN"=> "Ямало-Ненецкий авт. округ",
+            "RU-UD"=> "Удмуртская респ.",
+            "RU-ULY"=> "Ульяновская обл.",
+            "RU-KHA"=> "Хабаровский край",
+            "RU-KK"=> "Хакасия респ.",
+            "RU-IN"=> "Ингушская респ.",
+            "RU-ZAB"=> "Забайкальский край",
+            "RU-CU"=> "Чувашия респ.",
+            "RU-NEN"=> "Ненецкий авт. округ",
+            "RU-CE"=> "Чечня респ.",
+            "RU-SEV"=> "Севастополь",
+        ];
+
+        return $map[$isoCode];
+    }
+
+    public function getZone($cityFrom,$pointNumber){
+        $url = $this->pickPointConf->getHost() . '/getzone';
+        $requestArray = [
+            'SessionId' => $this->auth(),
+            'FromCity' =>$cityFrom,
+            'ToPT' => $pointNumber,
+            "IKN" => $this->pickPointConf->getIKN()
+        ];
+        $request = $this->client->post($url, [
+            'json' => $requestArray
+        ]);
+        $response = json_decode($request->getBody()->getContents(), true);
+        $this->checkMethodException($response, $url);
+
+
+        foreach ($response['Zones'] as $zone){
+            if($zone['DeliveryMode'] == 'Standard'){
+                return $zone;
+            }
+        }
+
+        return $response['Zones'][0];
     }
 }
